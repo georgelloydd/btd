@@ -982,7 +982,7 @@ cv.addEventListener('pointerdown', e => {
   e_pointerType = e.pointerType;
   if (!G || G.over) return; const m = toGame(e); G.mouse = m;
   if (e.button === 1) return;
-  if (e.button === 2) { if (window.R3D && R3D.on) return; G.place = null; showInfo(); updUI(); return; }
+  if (e.button === 2) { if (window.R3D && R3D.on && R3D.free) return; G.place = null; showInfo(); updUI(); return; }
   if (G.place) { const t = place(m.x, m.y); if (t) { if (!e.shiftKey) G.place = null; G.sel = e.shiftKey ? null : t; showInfo(); updUI(); } return; }
   let hit = null, bd = 22 * 22; for (const t of G.ts) { const d = (t.x - m.x) ** 2 + (t.y - m.y) ** 2; if (d < bd) { bd = d; hit = t; } }
   G.sel = hit; showInfo(); updUI();
