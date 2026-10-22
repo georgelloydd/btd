@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pop Defense — balloon tower defense</title>
+<meta name="description" content="A free browser balloon-popping tower defense game.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎈</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="wrap">
+  <div id="stage"><canvas id="game" width="960" height="640"></canvas></div>
+  <aside id="side">
+    <div id="hud">
+      <div class="stat" title="Lives"><span>❤️</span><b id="lives">0</b></div>
+      <div class="stat" title="Cash"><span>💰</span><b id="cash">0</b></div>
+      <div class="stat" title="Round"><span>🎯</span><b id="round">0</b></div>
+    </div>
+    <div class="ctrl">
+      <button id="go" class="green">▶ Start round</button>
+      <button id="pause" title="Pause (P)">⏸</button>
+      <button id="menuBtn" title="Main menu">☰</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="auto"> Auto-start next round</label>
+    <div id="shop"></div>
+    <div id="info"></div>
+  </aside>
+</div>
+
+<div id="menu" class="ov">
+  <div class="card">
+    <h1>🎈 Pop Defense</h1>
+    <p class="sub">Build towers. Pop every balloon. Don't let them through.</p>
+    <h3>Choose a map</h3>
+    <div id="maps"></div>
+    <h3>Difficulty</h3>
+    <div id="diffs"></div>
+    <button id="play" class="big green">Play</button>
+    <p class="help"><b>How to play:</b> pick a tower on the right, click the grass to place it. Click a tower to upgrade it (two paths — only one can reach tier 3) or sell it.<br>
+    <b>Keys:</b> Q W E R T Y U I = towers · Space = start round / speed · , and . = upgrade paths · Tab = targeting · S = sell · P = pause · Esc = cancel</p>
+  </div>
+</div>
+
+<div id="end" class="ov hidden">
+  <div class="card small">
+    <h1 id="endT"></h1>
+    <p id="endP"></p>
+    <div class="row"><button id="endA" class="green"></button><button id="endB">Main menu</button></div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
