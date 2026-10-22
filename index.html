@@ -6,17 +6,22 @@
 <title>Pop Defense — balloon tower defense</title>
 <meta name="description" content="A free browser balloon-popping tower defense game.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎈</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;700;800&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="wrap">
-  <div id="stage"><canvas id="game" width="960" height="640"></canvas></div>
-  <aside id="side">
-    <div id="hud">
+  <div id="stage"><div id="frame">
+      <div id="hud">
       <div class="stat" title="Lives"><span>❤️</span><b id="lives">0</b></div>
       <div class="stat" title="Cash"><span>💰</span><b id="cash">0</b></div>
       <div class="stat" title="Round"><span>🎯</span><b id="round">0</b></div>
     </div>
+      <canvas id="game" width="960" height="640"></canvas>
+  </div></div>
+  <aside id="side">
+    <div class="sidehead"><span class="ic">🎈</span><div class="lg">Pop Defense<small>Tower shop</small></div></div>
     <div class="ctrl">
       <button id="go" class="green">▶ Start round</button>
       <button id="pause" title="Pause (P)">⏸</button>
@@ -30,6 +35,7 @@
 </div>
 
 <div id="menu" class="ov">
+  <div class="sky"><i style="left:30%;background:#4cd964;animation-duration:12s;animation-delay:-12s;transform:scale(0.89)"></i><i style="left:11%;background:#ff4d5e;animation-duration:11s;animation-delay:-12s;transform:scale(0.93)"></i><i style="left:37%;background:#ff9f1c;animation-duration:11s;animation-delay:-7s;transform:scale(0.91)"></i><i style="left:46%;background:#4cd964;animation-duration:13s;animation-delay:-3s;transform:scale(0.76)"></i><i style="left:3%;background:#ff9f1c;animation-duration:21s;animation-delay:-8s;transform:scale(1.08)"></i><i style="left:24%;background:#3d8bff;animation-duration:15s;animation-delay:-9s;transform:scale(0.98)"></i><i style="left:93%;background:#ff9f1c;animation-duration:16s;animation-delay:-2s;transform:scale(1.11)"></i><i style="left:43%;background:#b388ff;animation-duration:17s;animation-delay:-16s;transform:scale(0.75)"></i><i style="left:31%;background:#ffd23f;animation-duration:15s;animation-delay:-2s;transform:scale(1.17)"></i><i style="left:70%;background:#ff9f1c;animation-duration:15s;animation-delay:-0s;transform:scale(1.15)"></i><i style="left:73%;background:#b388ff;animation-duration:15s;animation-delay:-16s;transform:scale(0.72)"></i><i style="left:54%;background:#ff7ad9;animation-duration:15s;animation-delay:-13s;transform:scale(0.87)"></i><i style="left:29%;background:#4cd964;animation-duration:15s;animation-delay:-1s;transform:scale(0.65)"></i><i style="left:59%;background:#b388ff;animation-duration:15s;animation-delay:-16s;transform:scale(0.92)"></i><i style="left:60%;background:#b388ff;animation-duration:16s;animation-delay:-4s;transform:scale(1.20)"></i><i style="left:25%;background:#ff4d5e;animation-duration:17s;animation-delay:-6s;transform:scale(0.98)"></i></div>
   <div class="card">
     <h1 class="logo"><span>🎈</span> Pop Defense <span>🐵</span></h1>
     <p class="sub">20 chimp towers in 4 classes. Pop every balloon. Don't let them through!</p>
@@ -44,6 +50,7 @@
 </div>
 
 <div id="end" class="ov hidden">
+  <div class="sky"><i style="left:30%;background:#4cd964;animation-duration:12s;animation-delay:-12s;transform:scale(0.89)"></i><i style="left:11%;background:#ff4d5e;animation-duration:11s;animation-delay:-12s;transform:scale(0.93)"></i><i style="left:37%;background:#ff9f1c;animation-duration:11s;animation-delay:-7s;transform:scale(0.91)"></i><i style="left:46%;background:#4cd964;animation-duration:13s;animation-delay:-3s;transform:scale(0.76)"></i><i style="left:3%;background:#ff9f1c;animation-duration:21s;animation-delay:-8s;transform:scale(1.08)"></i><i style="left:24%;background:#3d8bff;animation-duration:15s;animation-delay:-9s;transform:scale(0.98)"></i><i style="left:93%;background:#ff9f1c;animation-duration:16s;animation-delay:-2s;transform:scale(1.11)"></i><i style="left:43%;background:#b388ff;animation-duration:17s;animation-delay:-16s;transform:scale(0.75)"></i><i style="left:31%;background:#ffd23f;animation-duration:15s;animation-delay:-2s;transform:scale(1.17)"></i><i style="left:70%;background:#ff9f1c;animation-duration:15s;animation-delay:-0s;transform:scale(1.15)"></i><i style="left:73%;background:#b388ff;animation-duration:15s;animation-delay:-16s;transform:scale(0.72)"></i><i style="left:54%;background:#ff7ad9;animation-duration:15s;animation-delay:-13s;transform:scale(0.87)"></i><i style="left:29%;background:#4cd964;animation-duration:15s;animation-delay:-1s;transform:scale(0.65)"></i><i style="left:59%;background:#b388ff;animation-duration:15s;animation-delay:-16s;transform:scale(0.92)"></i><i style="left:60%;background:#b388ff;animation-duration:16s;animation-delay:-4s;transform:scale(1.20)"></i><i style="left:25%;background:#ff4d5e;animation-duration:17s;animation-delay:-6s;transform:scale(0.98)"></i></div>
   <div class="card small">
     <h1 id="endT"></h1>
     <p id="endP"></p>
