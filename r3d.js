@@ -10,7 +10,7 @@ cv.style.cssText = 'position:absolute;pointer-events:none;border-radius:inherit;
 stage.style.position = 'relative'; stage.insertBefore(cv, cv2);
 cv2.style.position = 'relative'; cv2.style.zIndex = '1';
 const gl = cv.getContext('webgl', { antialias: true, alpha: false });
-const R3D = window.R3D = { on: false, ok: !!gl, missing: [] };
+const R3D = window.R3D = { on: false, ok: !!gl, missing: [], free: false };
 if (!gl) return;
 
 // ---------- maths (column-major 4x4)
@@ -53,8 +53,8 @@ else if(uMode<2.5&&uMode>1.5)b=hue(floor((1.-(vL.y*.5+.5))*6.)/6.*.83);
 else if(uMode<3.5&&uMode>2.5)b=mix(vec3(.96),vec3(.12),step(.5,fract(vL.y*2.2+vL.x*.7)));
 else if(uMode<4.5&&uMode>3.5)b=mix(b,vec3(.24,.35,.16),step(.25,sin(vL.x*7.)*sin(vL.y*6.+vL.z*5.)));
 else if(uMode<5.5&&uMode>4.5)b=b*(.8+.25*step(.5,fract(vL.y*3.)));
-vec3 n=normalize(vN);float d=max(dot(n,normalize(vec3(.45,1.,.35))),0.);
-vec3 c=b*(.42+.62*d+.12*n.y);c=mix(c,b,uE);gl_FragColor=vec4(c,uC.a);}`;
+vec3 n=normalize(vN);float d=max(dot(n,normalize(vec3(-.5,1.,.45))),0.);d=smoothstep(.05,.75,d);float rim=pow(1.-abs(n.z*.6+n.y*.8),3.)*.18;
+vec3 c=b*(.5+.58*d+.08*n.y)+rim;c=mix(c,b,uE);gl_FragColor=vec4(c,uC.a);}`;
 function sh(t, s) { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
 const prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog); gl.useProgram(prog);
 const A = { P: gl.getAttribLocation(prog, 'aP'), N: gl.getAttribLocation(prog, 'aN'), T: gl.getAttribLocation(prog, 'aT') };
@@ -103,6 +103,7 @@ function chimp(shirt, o = {}) {
     p('S', WHITE, 7.3, 29.2, 2.8, 1.9), p('S', WHITE, 7.3, 29.2, -2.8, 1.9), p('S', DARK, 8.9, 29.2, 2.8, 1), p('S', DARK, 8.9, 29.2, -2.8, 1),
     p('S', '#5a3420', 10.2, 26.2, 0, 1.2, 0.9, 1.7),
   ];
+  L.forEach((q, i) => q[13] = i < 2 ? 'f' : i < 5 ? 'b' : i < 7 ? 'a' : 'h');
   return L;
 }
 const dartHand = (c = '#33363c', fin = RED) => [p('c', c, 7, 16, 8, 0.7, 10, 0.7, 0, FWD), p('k', fin, 6, 16, 8, 2.2, -3, 2.2, 0, FWD)];
@@ -132,12 +133,18 @@ const MODELS = {
 };
 const BUILT = {}; const LOCAL = new Map();
 function model(key) { if (BUILT[key]) return BUILT[key]; const f = MODELS[key]; if (!f) { if (!R3D.missing.includes(key)) R3D.missing.push(key); return model('dart'); }
-  return BUILT[key] = f().map(q => ({ m: q[0], c: q[1], a: q[11], e: q[12], L: trs(q[2], q[3], q[4], q[8], q[9], q[10], q[5], q[6], q[7]) })); }
-function drawModel(key, X, Y, Z, ry, k, alpha = 1, flash = 0) {
+  const raw = f(), isC = raw.some(q => q[13]);
+  return BUILT[key] = raw.map(q => ({ m: q[0], c: q[1], a: q[11], e: q[12], g: q[13] || (!isC ? 'm' : q[3] >= 26 ? 'h' : q[2] < 0 ? 'b' : 'w'), L: trs(q[2], q[3], q[4], q[8], q[9], q[10], q[5], q[6], q[7]) })); }
+const about = (px, py, pz, rz, sy = 1, sx = 1) => mul(trs(px, py, pz, 0, rz, 0, sx, sy, sx), trs(-px, -py, -pz));
+function drawModel(key, X, Y, Z, ry, k, alpha = 1, flash = 0, an = null) {
   const T = trs(X, Y, Z, ry, 0, 0, k, k, k);
-  for (const q of model(key)) put(q.m, mul(T, q.L), q.c, Math.min(q.a, alpha), 0, Math.max(q.e, flash));
+  let G = null;
+  if (an) { const lean = about(0, 2, 0, an.lean), br = about(0, 0, 0, 0, 1 + an.br);
+    G = { f: m4(), b: mul(lean, br), h: mul(lean, mul(br, trs(an.nod * 2, an.br * 30 + an.bob, 0, 0, an.nod * 0.04))), a: mul(lean, mul(br, about(5, 16, 0, an.sw))), w: mul(lean, mul(br, about(5, 16, 0, an.sw))),
+      m: mul(trs(-an.rec, 0, 0, an.spin), about(0, 0, 0, 0, 1 - an.sq, 1 + an.sq * 0.5)) }; }
+  for (const q of model(key)) put(q.m, G ? mul(T, mul(G[q.g], q.L)) : mul(T, q.L), q.c, Math.min(q.a, alpha), 0, Math.max(q.e, flash));
 }
-const shadow = (X, Z, r, a = 0.22) => put('D', trs(X, 0.6, Z, 0, 0, 0, r, 1, r * 0.9), '#000000', a);
+const shadow = (X, Z, r, a = 0.22, h = 0) => { const ox = 3 + h * 0.35, oz = 2 + h * 0.3; put('D', trs(X + ox, 0.5, Z + oz, 0, 0, 0, r * 1.25, 1, r * 1.05), '#000000', a * 0.45); put('D', trs(X + ox * 0.8, 0.6, Z + oz * 0.8, 0, 0, 0, r * 0.95, 1, r * 0.8), '#000000', a * 0.6); };
 const WX = x => x - HW, WZ = y => y - HH;
 
 // ---------- camera
@@ -145,7 +152,9 @@ const CAM0 = { yaw: 0, pitch: 0.95, dist: 880, tx: 0, tz: 25 };
 let cam = Object.assign({}, CAM0);
 try { Object.assign(cam, JSON.parse(localStorage.getItem('popdef_cam') || '{}')); } catch (e) { }
 const saveCam = () => { try { localStorage.setItem('popdef_cam', JSON.stringify(cam)); } catch (e) { } };
+const TILT = 0.62;
 function camMats() {
+  if (!R3D.free) { VP = new Float32Array([1 / HW, 0, 0, 0, 0, TILT / HH, -1 / 900, 0, 0, -1 / HH, -TILT / 900, 0, 0, 0, 0, 1]); return; }
   const cp = Math.cos(cam.pitch), e = [cam.tx + Math.sin(cam.yaw) * cp * cam.dist, Math.sin(cam.pitch) * cam.dist, cam.tz + Math.cos(cam.yaw) * cp * cam.dist];
   VP = mul(persp(0.75, W / H, 20, 5000), lookAt(e, [cam.tx, 0, cam.tz]));
 }
@@ -161,12 +170,12 @@ R3D.zoom = f => { cam.dist = Math.max(320, Math.min(1600, cam.dist * f)); saveCa
 R3D.reset = () => { cam = Object.assign({}, CAM0); saveCam(); };
 // mouse: right-drag = rotate/tilt, middle-drag or shift+right-drag = pan, wheel = zoom, right-click (no drag) = cancel placing
 let drag = null;
-cv2.addEventListener('pointerdown', e => { if (!R3D.on || !API.G || (e.button !== 2 && e.button !== 1)) return; drag = { x: e.clientX, y: e.clientY, b: e.button, pan: e.button === 1 || e.shiftKey, moved: 0 }; try { cv2.setPointerCapture(e.pointerId); } catch (er) { } }, true);
+cv2.addEventListener('pointerdown', e => { if (!R3D.on || !R3D.free || !API.G || (e.button !== 2 && e.button !== 1)) return; drag = { x: e.clientX, y: e.clientY, b: e.button, pan: e.button === 1 || e.shiftKey, moved: 0 }; try { cv2.setPointerCapture(e.pointerId); } catch (er) { } }, true);
 window.addEventListener('pointermove', e => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
   if (drag.pan) { const s = cam.dist / 700, c = Math.cos(cam.yaw), si = Math.sin(cam.yaw); cam.tx = Math.max(-500, Math.min(500, cam.tx - (dx * c + dy * si) * s)); cam.tz = Math.max(-350, Math.min(350, cam.tz - (-dx * si + dy * c) * s)); }
   else { cam.yaw -= dx * 0.008; cam.pitch = Math.max(0.3, Math.min(1.5, cam.pitch + dy * 0.006)); } });
-window.addEventListener('pointerup', () => { if (!drag) return; if (drag.moved < 5 && drag.b === 2) API.cancel(); drag = null; saveCam(); });
-cv2.addEventListener('wheel', e => { if (!R3D.on || !API.G) return; e.preventDefault(); R3D.zoom(e.deltaY > 0 ? 1.1 : 1 / 1.1); }, { passive: false });
+window.addEventListener('pointerup', () => { if (!drag) return; drag = null; saveCam(); });
+cv2.addEventListener('wheel', e => { if (!R3D.on || !R3D.free || !API.G) return; e.preventDefault(); R3D.zoom(e.deltaY > 0 ? 1.1 : 1 / 1.1); }, { passive: false });
 
 // on-screen controls
 const ui = document.createElement('div'); ui.id = 'cam3d';
@@ -178,7 +187,7 @@ const tog = document.createElement('button'); tog.id = 'tog3d'; tog.title = '3D 
 const ctrl = document.querySelector('.ctrl'); if (ctrl) ctrl.appendChild(tog);
 function setOn(v) { R3D.on = v; tog.textContent = v ? '3D' : '2D'; tog.classList.toggle('green', v); try { localStorage.setItem('popdef_3d', v ? '1' : '0'); } catch (e) { } if (!v) R3D.hide(); }
 tog.onclick = () => setOn(!R3D.on);
-document.addEventListener('keydown', e => { if (!API.G || /INPUT|TEXTAREA/.test(document.activeElement && document.activeElement.tagName)) return; const k = e.key.toUpperCase(); if (k === 'V') setOn(!R3D.on); else if (k === 'B' && R3D.on) R3D.reset(); });
+document.addEventListener('keydown', e => { if (!API.G || /INPUT|TEXTAREA/.test(document.activeElement && document.activeElement.tagName)) return; const k = e.key.toUpperCase(); if (k === 'V') setOn(!R3D.on);  });
 R3D.hide = () => { cv2.style.background = ''; cv.style.display = 'none'; ui.style.display = 'none'; };
 
 // ---------- per-frame render
@@ -224,7 +233,7 @@ function drawBalloon(b, tm) {
   const T = BT[b.t], X = WX(b.x), Z = WZ(b.y), bob = Math.sin(tm * 3 + b.wob) * 1.6;
   if (T.big) {
     const L = T.r * 1.6, R = T.r * 0.72, Y = R + 22 + bob, ry = -b.ang, col = T.col, dark = b.t === 'titan' ? '#7a1d18' : '#1f5f94';
-    shadow(X, Z, L * 0.9, 0.25);
+    shadow(X, Z, L * 0.9, 0.3, Y);
     const Tm = trs(X, Y, Z, ry, Math.sin(tm * 1.3 + b.wob) * 0.04, 0, 1, 1, 1);
     const part = (m, c, x, y, z, sx, sy, sz, rz = 0, rx = 0, a = 1, mode = 0) => put(m, mul(Tm, trs(x, y, z, 0, rz, rx, sx, sy, sz)), c, a, b.camo && m === 'S' ? 4 : mode);
     part('S', col, 0, 0, 0, L, R, R);
@@ -236,9 +245,9 @@ function drawBalloon(b, tm) {
     if (b.glued > 0) part('S', b.acid ? '#78d23c' : '#e1dc46', 0, -R * 0.3, 0, L * 1.02, R * 0.8, R * 1.04, 0, 0, 0.5);
     return;
   }
-  const r = T.r * 1.08, Y = r + 20 + bob; shadow(X, Z, r * 0.7, 0.18);
+  const r = T.r * 1.08, Y = r + 20 + bob; shadow(X, Z, r * 0.7, 0.22, Y); const wq = Math.sin(tm * 6 + b.wob * 3) * 0.045;
   const mode = b.camo ? 4 : (BMODE[b.t] || 0), col = b.t === 'lead' ? '#a8b0b8' : b.t === 'rainbow' ? '#ffffff' : T.col;
-  put('S', trs(X, Y, Z, 0, 0, 0, r * 0.86, r, r * 0.86), col, 1, mode, b.t === 'lead' ? 0.05 : 0);
+  put('S', trs(X, Y, Z, 0, wq * 0.6, 0, r * 0.86 * (1 + wq), r * (1 - wq), r * 0.86 * (1 + wq)), col, 1, mode, b.t === 'lead' ? 0.05 : 0);
   put('s', trs(X - r * 0.3, Y + r * 0.42, Z - r * 0.3, 0, 0, 0, r * 0.18, r * 0.28, r * 0.18), WHITE, 0.6, 0, 1);
   put('k', trs(X, Y - r * 1.12, Z, 0, 0, 0, 2.6, 4, 2.6), b.t === 'rainbow' ? '#a04ad7' : b.t === 'white' || b.t === 'zebra' ? '#bbbbbb' : col, 1);
   put('c', trs(X, Y - r * 1.12 - 10, Z, 0, 0, 0, 0.3, 10, 0.3), '#444', 0.7);
@@ -250,9 +259,14 @@ function drawTower(t, tm, alpha = 1) {
   const type = t.type, X = WX(t.x), Z = WZ(t.y), up = t.up || [0, 0], born = t.born !== undefined ? tm - t.born : 9;
   const k = (1 + 0.05 * (up[0] + up[1])) * (born < 0.3 ? 0.6 + born / 0.3 * 0.4 + Math.sin(born / 0.3 * PI) * 0.15 : 1) * (1 + Math.max(0, t.flash || 0) * 0.08);
   const ry = MACH[type] || type === 'frost' ? 0 : -(t.ang || 0);
-  shadow(X, Z, 17 * k, 0.25 * alpha);
-  drawModel(type, X, 0, Z, ry, k, alpha, (t.flash || 0) > 0 ? 0.25 : 0);
-  if (type === 'ace') { const an = tm * 1.6 + (t.pa || 0), R = 38; drawModel('acePlane', X + Math.cos(an) * R, 46 + Math.sin(tm * 2) * 3, Z + Math.sin(an) * R, -(an + PI / 2), 1, alpha); shadow(X + Math.cos(an) * R, Z + Math.sin(an) * R, 10, 0.15 * alpha); }
+  shadow(X, Z, 17 * k, 0.3 * alpha, 8);
+  if ((t.flash || 0) > (t._lf || 0) + 0.02) t._ft = tm; t._lf = t.flash || 0;
+  const ph = t._ft !== undefined ? Math.min(1, (tm - t._ft) / 0.32) : 1, hit = Math.sin(ph * PI), seed = (t.x * 7 + t.y * 3) % 6.28;
+  const spinT = type === 'tack' ? (t._sp = (t._sp || 0) + (ph < 1 ? 0.25 : 0.01)) : 0;
+  const an = { br: Math.sin(tm * 2.4 + seed) * 0.03, bob: Math.sin(tm * 2.4 + seed + 0.6) * 0.5, nod: hit, lean: -0.22 * hit, sw: ph < 1 ? (ph < 0.35 ? ph / 0.35 * 1.1 : 1.1 - (ph - 0.35) / 0.65 * 2.3) * (1 - ph * 0.3) : Math.sin(tm * 1.7 + seed) * 0.06,
+    rec: (type === 'bomb' || type === 'mortar' || type === 'gatling' ? 5 : 0) * hit, sq: (MACH[type] || type === 'frost' || type === 'bomb' || type === 'mortar' ? 0.12 : 0.04) * hit + Math.sin(tm * 3 + seed) * 0.015, spin: spinT * 0 };
+  drawModel(type, X, 0, Z, ry + (type === 'tack' ? spinT : 0), k, alpha, (t.flash || 0) > 0 ? 0.2 : 0, alpha < 1 ? null : an);
+  if (type === 'ace') { const an = tm * 1.6 + (t.pa || 0), R = 38; drawModel('acePlane', X + Math.cos(an) * R, 46 + Math.sin(tm * 2) * 3, Z + Math.sin(an) * R, -(an + PI / 2), 1, alpha); shadow(X + Math.cos(an) * R, Z + Math.sin(an) * R, 10, 0.2 * alpha, 46); }
   if (alpha === 1) for (let pth = 0; pth < 2; pth++) for (let i = 0; i < up[pth]; i++) put('s', trs(X + (pth ? 5 : -5), 44 * k + 4 + i * 6, Z, 0, 0, 0, 2.3), pth ? '#3fa0ff' : '#ff4d4d', 1, 0, 0.5);
 }
 function syncSize() {
@@ -262,10 +276,10 @@ function syncSize() {
 }
 R3D.render = () => {
   const G = API.G, bg = API.bg; if (!G || !bg) return;
-  cv.style.display = 'block'; ui.style.display = 'flex'; syncSize();
+  cv.style.display = 'block'; ui.style.display = R3D.free ? 'flex' : 'none'; syncSize();
   if (texBg !== bg) { texBg = bg; if (!tex) tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bg.cv); for (const [pn, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, pn, v); }
   camMats(); Q = []; QT = []; const tm = G.time;
-  put('B', trs(0, -18, 0, 0, 0, 0, W + 24, 36, H + 24), '#6b4a2b'); put('B', trs(0, -3, 0, 0, 0, 0, W + 12, 6, H + 12), '#4f8f2f');
+  if (R3D.free) put('B', trs(0, -18, 0, 0, 0, 0, W + 24, 36, H + 24), '#6b4a2b'); put('B', trs(0, -3, 0, 0, 0, 0, W + 12, 6, H + 12), '#4f8f2f');
   put('P', trs(0, 0.2, 0, 0, 0, 0, 1, 1, 1), WHITE, 1, 1);
   const sel = G.sel;
   if (sel && sel.s && sel.s.range < 2000) { put('D', trs(WX(sel.x), 0.9, WZ(sel.y), 0, 0, 0, sel.s.range, 1, sel.s.range), WHITE, 0.13, 0, 1); put('R', trs(WX(sel.x), 1, WZ(sel.y), 0, 0, 0, sel.s.range, 1, sel.s.range), WHITE, 0.7, 0, 1); }
