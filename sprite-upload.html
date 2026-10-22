@@ -1,0 +1,128 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pop Defense - Sprite uploader</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:"Trebuchet MS",Verdana,sans-serif;background:#132235;color:#fff}
+.wrap{max-width:1100px;margin:0 auto;padding:18px}h1{margin:0 0 4px;color:#ffe066}p{color:#d9e4f0;line-height:1.45}
+.card{background:#1e3350;border:2px solid #2f4d75;border-radius:14px;padding:14px;margin:12px 0}
+label{display:block;font-size:12px;color:#b9c9dc;margin:6px 0 3px}input,select{font:inherit;padding:7px 9px;border-radius:8px;border:1px solid #47648c;background:#0f1d2e;color:#fff;width:100%}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>div{flex:1;min-width:150px}
+button{font:inherit;font-weight:700;cursor:pointer;border:0;border-radius:10px;padding:9px 14px;background:linear-gradient(#56789c,#33465c);color:#fff;box-shadow:0 3px 0 #1d2a38}
+button.green{background:linear-gradient(#6fdc4f,#33a83a);box-shadow:0 3px 0 #1f6e25}button:disabled{filter:grayscale(.8);cursor:not-allowed}
+h2{margin:4px 0 8px;font-size:18px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.slot{display:flex;gap:8px;align-items:center;background:#0f1d2e;border-radius:10px;padding:6px;border:2px solid transparent}.slot.set{border-color:#5fd46a}
+.slot .pv{width:56px;height:56px;flex:none;border-radius:8px;background:repeating-conic-gradient(#2a3b52 0 25%,#22324a 0 50%) 0 0/14px 14px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.slot .pv img{max-width:100%;max-height:100%}.slot .f{flex:1;min-width:0}.slot b{font-size:13px}.slot select,.slot input{padding:3px 5px;font-size:12px;margin-top:2px}
+.mini{display:flex;gap:4px}.mini>*{flex:1}#log{white-space:pre-wrap;font:12px/1.4 monospace;background:#0b1522;border-radius:10px;padding:10px;max-height:260px;overflow:auto}
+.ok{color:#7fe08a}.err{color:#ff8a7a}.dim{color:#9fb3c8;font-size:12px}
+</style></head><body><div class="wrap">
+<h1>&#127880; Pop Defense sprite uploader</h1>
+<p>Use this once to put your sprite images into the <b>sprites/</b> folder of your repo. The game loads them automatically. Your normal <b>deploy.html</b> never touches that folder, so you can keep redeploying the game and the sprites stay. Anything you leave empty keeps the built-in drawn art.</p>
+<div class="card"><div class="row"><div><label>Owner</label><input id="owner" value="georgelloydd"></div><div><label>Repo</label><input id="repo" value="btd"></div><div><label>Branch</label><input id="branch" value="main"></div></div>
+<label>Fine-grained token (same one as deploy.html; needs Contents: Read and write)</label><input id="tok" type="password" placeholder="github_pat_..." autocomplete="off">
+<label style="display:flex;gap:6px;align-items:center"><input id="rem" type="checkbox" style="width:auto"> Remember token on this computer</label>
+<div class="row" style="margin-top:8px"><button id="loadCur">Load sprites already on GitHub</button></div></div>
+<div class="card"><h2>1. Pick your images</h2>
+<div class="row"><div><label>Choose a folder (all images inside it, including subfolders)</label><input id="dir" type="file" webkitdirectory multiple></div><div><label>...or choose individual images</label><input id="files" type="file" accept="image/*" multiple></div></div>
+<p class="dim" id="count">No images chosen yet. PNG, GIF, WebP, JPG and SVG all work. Big files are shrunk automatically before upload.</p>
+<div class="row"><button id="auto">Auto-match by file name</button><button id="clear">Clear all choices</button></div></div>
+<div class="card"><h2>2. Match images to towers</h2><p class="dim">"Faces" is the way the character looks in your image, so it turns correctly to aim. Use "No turning" for buildings like the farm.</p><div class="grid" id="tw"></div></div>
+<div class="card"><h2>3. Match images to balloons</h2><div class="grid" id="bl"></div></div>
+<div class="card"><h2>4. Upload</h2><div class="row"><div><label>Max size per sprite (px)</label><select id="max"><option>96</option><option selected>128</option><option>192</option><option>256</option></select></div></div>
+<div class="row" style="margin-top:10px"><button class="green" id="go">Upload sprites to GitHub</button><button id="wipe">Remove all custom sprites</button></div>
+<p class="dim">After uploading, GitHub Pages takes about a minute to update. Then refresh the game.</p><div id="log"></div></div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const TOWERS = [['dart','Dart Chimp','dart monkey'],['boomer','Boomer Chimp','boomerang'],['bomb','Cannon Chimp','bomb shooter cannon'],['tack','Tack Turret','tack shooter'],['frost','Frost Chimp','ice monkey freeze'],['glue','Goo Chimp','glue gunner goo'],['sling','Gunslinger Chimp','gunslinger desperado pistol'],['sniper','Sniper Chimp','sniper'],['mortar','Barrel Mortar','mortar'],['gatling','Gatling Chimp','dartling gatling'],['ace','Sky Ace','monkey ace plane'],['mage','Storm Wizard','wizard mage'],['hyper','Hyper Chimp','super monkey hyper'],['ninja','Shadow Chimp','ninja shadow'],['potion','Potion Chimp','alchemist potion'],['druid','Thorn Druid','druid'],['farm','Fruit Farm','banana farm fruit'],['spike','Spike Maker','spike factory'],['camp','Chimp Camp','village camp'],['engi','Engineer Chimp','engineer engi']];
+const BALLOONS = [['red','Red'],['blue','Blue'],['green','Green'],['yellow','Yellow'],['pink','Pink'],['black','Black'],['white','White'],['lead','Lead'],['zebra','Zebra'],['rainbow','Rainbow'],['ceramic','Ceramic'],['blimp','Sky Blimp','moab blimp'],['titan','Titan Blimp','bfb zomg titan']];
+const FACES = [['up','Faces up'],['right','Faces right'],['down','Faces down'],['left','Faces left'],['none','No turning']];
+let IMGS = []; // {name, path, url, file}
+const CH = { towers: {}, balloons: {} }; // key -> {src: index | 'remote', face, scale, remoteUrl}
+const saved = localStorage.getItem('popdef_tok'); if (saved) { $('tok').value = saved; $('rem').checked = true; }
+function log(s, cls) { const d = document.createElement('div'); if (cls) d.className = cls; d.textContent = s; $('log').appendChild(d); $('log').scrollTop = 1e9; }
+function slotHTML(group, key, label, defFace) {
+  return `<div class="slot" id="s_${group}_${key}"><div class="pv"></div><div class="f"><b>${label}</b><select data-g="${group}" data-k="${key}" data-f="src"></select><div class="mini"><select data-g="${group}" data-k="${key}" data-f="face">${FACES.map(f => `<option value="${f[0]}"${f[0] === defFace ? ' selected' : ''}>${f[1]}</option>`).join('')}</select><input type="number" step="0.1" min="0.3" max="3" value="1" title="Size" data-g="${group}" data-k="${key}" data-f="scale"></div></div></div>`;
+}
+$('tw').innerHTML = TOWERS.map(t => slotHTML('towers', t[0], t[1], ['farm','camp','spike','tack'].includes(t[0]) ? 'none' : 'up')).join('');
+$('bl').innerHTML = BALLOONS.map(b => slotHTML('balloons', b[0], b[1], ['blimp','titan'].includes(b[0]) ? 'right' : 'none')).join('');
+function refreshSelects() {
+  document.querySelectorAll('select[data-f=src]').forEach(sel => {
+    const g = sel.dataset.g, k = sel.dataset.k, c = CH[g][k];
+    let o = '<option value="">(keep built-in art)</option>';
+    if (c && c.src === 'remote') o += '<option value="remote" selected>Already on GitHub</option>';
+    o += IMGS.map((im, i) => `<option value="${i}"${c && c.src === i ? ' selected' : ''}>${im.path}</option>`).join('');
+    sel.innerHTML = o; paint(g, k);
+  });
+}
+function paint(g, k) {
+  const c = CH[g][k], el = $(`s_${g}_${k}`), pv = el.querySelector('.pv');
+  const url = !c ? '' : c.src === 'remote' ? c.remoteUrl : IMGS[c.src] ? IMGS[c.src].url : '';
+  pv.innerHTML = url ? `<img src="${url}">` : ''; el.classList.toggle('set', !!url);
+  if (c) { el.querySelector('[data-f=face]').value = c.face; el.querySelector('[data-f=scale]').value = c.scale; }
+}
+document.addEventListener('change', e => {
+  const t = e.target; if (!t.dataset || !t.dataset.f) return; const g = t.dataset.g, k = t.dataset.k, el = $(`s_${g}_${k}`);
+  const face = el.querySelector('[data-f=face]').value, scale = +el.querySelector('[data-f=scale]').value || 1;
+  if (t.dataset.f === 'src') { if (t.value === '') delete CH[g][k]; else CH[g][k] = Object.assign(CH[g][k] || {}, { src: t.value === 'remote' ? 'remote' : +t.value, face, scale }); }
+  else if (CH[g][k]) { CH[g][k].face = face; CH[g][k].scale = scale; }
+  paint(g, k);
+});
+function addFiles(list) {
+  for (const f of list) { if (!/^image\//.test(f.type) && !/\.(png|gif|webp|jpe?g|svg)$/i.test(f.name)) continue; IMGS.push({ name: f.name, path: f.webkitRelativePath || f.name, url: URL.createObjectURL(f), file: f }); }
+  $('count').textContent = IMGS.length + ' images ready. Click "Auto-match" or pick them from the dropdowns.'; refreshSelects();
+}
+$('dir').onchange = e => addFiles(e.target.files); $('files').onchange = e => addFiles(e.target.files);
+const norm = s => s.toLowerCase().replace(/\.[a-z0-9]+$/, '').replace(/[^a-z0-9]+/g, ' ');
+function score(path, words) { const p = ' ' + norm(path) + ' '; let s = 0; for (const w of words) { if (p.includes(' ' + w + ' ')) s += 3; else if (p.includes(w)) s += 1; } return s; }
+$('auto').onclick = () => {
+  let n = 0; const groups = [['towers', TOWERS], ['balloons', BALLOONS]];
+  for (const [g, list] of groups) for (const [k, label, extra] of list) {
+    const words = [...new Set((k + ' ' + label + ' ' + (extra || '')).toLowerCase().split(/\s+/))].filter(w => w.length > 2 && !['chimp','monkey','balloon','bloon'].includes(w));
+    if (g === 'balloons') words.push(k + ' bloon', k + 'bloon');
+    let best = -1, bs = 0; IMGS.forEach((im, i) => { const s = score(im.path, words) - im.path.length * 0.001; if (s > bs) { bs = s; best = i; } });
+    if (best >= 0 && bs >= 1) { const el = $(`s_${g}_${k}`); CH[g][k] = { src: best, face: el.querySelector('[data-f=face]').value, scale: +el.querySelector('[data-f=scale]').value || 1 }; n++; }
+  }
+  refreshSelects(); log('Auto-matched ' + n + ' slots. Check them and fix any wrong ones.', 'ok');
+};
+$('clear').onclick = () => { CH.towers = {}; CH.balloons = {}; refreshSelects(); };
+const cfg = () => ({ owner: $('owner').value.trim(), repo: $('repo').value.trim(), branch: $('branch').value.trim() || 'main', token: $('tok').value.trim() });
+async function gh(token, method, path, body) {
+  const r = await fetch('https://api.github.com' + path, { method, headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  let j = null; try { j = await r.json(); } catch (e) { } return { s: r.status, j };
+}
+const b64 = s => btoa(unescape(encodeURIComponent(s)));
+async function getFile(c, path) { const r = await gh(c.token, 'GET', `/repos/${c.owner}/${c.repo}/contents/${path}?ref=${encodeURIComponent(c.branch)}`); return r.s === 200 ? r.j : null; }
+async function putFile(c, path, content, msg) {
+  for (let a = 0; a < 3; a++) { const cur = await getFile(c, path); const r = await gh(c.token, 'PUT', `/repos/${c.owner}/${c.repo}/contents/${path}`, { message: msg, content, branch: c.branch, ...(cur ? { sha: cur.sha } : {}) }); if (r.s === 200 || r.s === 201) return true; if (r.s !== 409) throw new Error(path + ': HTTP ' + r.s + ' ' + (r.j && r.j.message || '')); await new Promise(z => setTimeout(z, 1200)); }
+  throw new Error(path + ': kept conflicting, try again');
+}
+function toPng(url, max) { return new Promise((res, rej) => { const im = new Image(); im.onload = () => { const k = Math.min(1, max / Math.max(im.naturalWidth || max, im.naturalHeight || max)); const w = Math.max(1, Math.round((im.naturalWidth || max) * k)), h = Math.max(1, Math.round((im.naturalHeight || max) * k)); const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const x = cv.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, 0, 0, w, h); res(cv.toDataURL('image/png').split(',')[1]); }; im.onerror = () => rej(new Error('Could not read image')); im.src = url; }); }
+function check(c) { if (!c.token || !c.owner || !c.repo) { log('Fill in owner, repo and token first.', 'err'); return false; } if ($('rem').checked) localStorage.setItem('popdef_tok', c.token); else localStorage.removeItem('popdef_tok'); return true; }
+$('loadCur').onclick = async () => {
+  const c = cfg(); if (!check(c)) return; log('Loading sprites/manifest.json ...');
+  const f = await getFile(c, 'sprites/manifest.json'); if (!f) { log('No custom sprites on GitHub yet.'); return; }
+  const m = JSON.parse(decodeURIComponent(escape(atob(f.content.replace(/\n/g, '')))));
+  for (const g of ['towers', 'balloons']) for (const [k, v] of Object.entries(m[g] || {})) CH[g][k] = { src: 'remote', face: v.face, scale: v.scale || 1, file: v.file, remoteUrl: `https://raw.githubusercontent.com/${c.owner}/${c.repo}/${c.branch}/sprites/${v.file}` };
+  refreshSelects(); log('Loaded ' + (Object.keys(m.towers || {}).length + Object.keys(m.balloons || {}).length) + ' sprites already on GitHub.', 'ok');
+};
+$('go').onclick = async () => {
+  const c = cfg(); if (!check(c)) return; $('go').disabled = true; const max = +$('max').value;
+  try {
+    const r = await gh(c.token, 'GET', `/repos/${c.owner}/${c.repo}`); if (r.s !== 200) throw new Error('Cannot open repo (HTTP ' + r.s + '). Check owner, repo and that the token can access it.');
+    const man = { v: Date.now(), towers: {}, balloons: {} }; let n = 0;
+    for (const g of ['towers', 'balloons']) for (const [k, ch] of Object.entries(CH[g])) {
+      const file = (g === 'towers' ? 't_' : 'b_') + k + '.png';
+      if (ch.src !== 'remote') { log('Uploading ' + file + ' ...'); await putFile(c, 'sprites/' + file, await toPng(IMGS[ch.src].url, max), 'Sprite ' + file); n++; }
+      man[g][k] = { file: ch.src === 'remote' ? ch.file : file, face: ch.face, scale: ch.scale };
+    }
+    log('Saving manifest ...'); await putFile(c, 'sprites/manifest.json', b64(JSON.stringify(man, null, 1)), 'Update sprite manifest');
+    log('Done! Uploaded ' + n + ' new images. Refresh the game in about a minute.', 'ok');
+  } catch (e) { log('Error: ' + e.message, 'err'); }
+  $('go').disabled = false;
+};
+$('wipe').onclick = async () => {
+  const c = cfg(); if (!check(c) || !confirm('Switch the game back to the built-in art? (The image files stay in the repo, they just stop being used.)')) return;
+  try { await putFile(c, 'sprites/manifest.json', b64(JSON.stringify({ v: Date.now(), towers: {}, balloons: {} })), 'Clear sprites'); CH.towers = {}; CH.balloons = {}; refreshSelects(); log('Back to built-in art.', 'ok'); } catch (e) { log('Error: ' + e.message, 'err'); }
+};
+refreshSelects();
+</script></body></html>
